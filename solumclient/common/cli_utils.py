@@ -14,16 +14,19 @@
 # limitations under the License.
 
 import os
+import pprint
 
 from solumclient.builder import client as builder_client
 from solumclient import client as solum_client
 from solumclient.common import exc
+from solumclient.openstack.common import cliutils
 
 
 class CommandsBase(object):
     """Base command parsing class."""
     parser = None
     solum = None
+    json_output = False
 
     def __init__(self, parser):
         self.parser = parser
@@ -134,7 +137,29 @@ class CommandsBase(object):
     def _get_global_flags(self):
         """Get global flags."""
         # Good location to add_argument() global options like --verbose
-        pass
+        self.parser.add_argument('--json',
+                                 action='store_true',
+                                 help='JSON formatted output')
+
+        args, _ = self.parser.parse_known_args()
+        if args.json:
+            self.json_output = True
+
+    def _print_dict(self, dct, dict_property="Property", wrap=0):
+        if self.json_output:
+            pprint.pprint(dct, width=wrap)
+        else:
+            cliutils.print_dict(dct, dict_property, wrap)
+
+    def _print_list(self, objs, fields, formatters=None, sortby_index=0,
+                   mixed_case_fields=None, field_labels=None):
+        if self.json_output:
+            subset = [dict([(f, vars(o).get(f, '')) for f in fields])
+                      for o in objs]
+            pprint.pprint(subset)
+        else:
+            cliutils.print_list(objs, fields, formatters, sortby_index,
+                                mixed_case_fields, field_labels)
 
 
 def env(*vars, **kwargs):
