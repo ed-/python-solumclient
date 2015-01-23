@@ -47,12 +47,10 @@ class CommandsBase(object):
         client_args = vars(parsed)
         if 'os_auth_token' in client_args:
             del client_args['os_auth_token']
-        if vars(parsed).get('action') == 'build':
-            self.client = builder_client.get_client(parsed.solum_api_version,
-                                                    **client_args)
-        else:
-            self.client = solum_client.get_client(parsed.solum_api_version,
-                                                  **client_args)
+        self.bclient = builder_client.get_client(parsed.solum_api_version,
+                                                 **client_args)
+        self.client = solum_client.get_client(parsed.solum_api_version,
+                                              **client_args)
 
         if parsed.action in self._actions:
             try:

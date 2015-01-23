@@ -426,7 +426,7 @@ Available commands:
                 print("Error in language pack file: %s", str(exc))
                 sys.exit(1)
 
-        languagepack = self.client.languagepacks.create(**data)
+        languagepack = self.bclient.languagepacks.create(**data)
         fields = ['uuid', 'name', 'description', 'compiler_versions',
                   'os_platform']
         data = dict([(f, getattr(languagepack, f, ''))
@@ -439,13 +439,13 @@ Available commands:
                                  help="Language pack id")
         self.parser._names['lp_id'] = 'languagepack'
         args, _ = self.parser.parse_known_args()
-        self.client.languagepacks.delete(lp_id=args.lp_id)
+        self.bclient.languagepacks.delete(lp_id=args.lp_id)
 
     def list(self):
         """List all language packs."""
         fields = ['uuid', 'name', 'description', 'compiler_versions',
                   'os_platform']
-        response = self.client.languagepacks.list()
+        response = self.bclient.languagepacks.list()
         cliutils.print_list(response, fields)
 
     def show(self):
@@ -454,7 +454,7 @@ Available commands:
                                  help="Language pack id")
         self.parser._names['lp_id'] = 'languagepack'
         args, _ = self.parser.parse_known_args()
-        response = self.client.languagepacks.get(lp_id=args.lp_id)
+        response = self.bclient.languagepacks.get(lp_id=args.lp_id)
         fields = ['uuid', 'name', 'description', 'compiler_versions',
                   'os_platform']
         data = dict([(f, getattr(response, f, ''))
@@ -481,9 +481,9 @@ Available commands:
                 except ValueError as exc:
                     print("Error in language pack file: %s", str(exc))
                     sys.exit(1)
-        response = self.client.images.create(name=args.name,
-                                             source_uri=args.git_url,
-                                             lp_metadata=lp_metadata)
+        response = self.bclient.images.create(name=args.name,
+                                              source_uri=args.git_url,
+                                              lp_metadata=lp_metadata)
         fields = ['uuid', 'name', 'decription', 'state']
         data = dict([(f, getattr(response, f, ''))
                      for f in fields])
