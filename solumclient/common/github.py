@@ -21,6 +21,7 @@ import json
 import random
 import re
 import string
+import urllib
 
 import httplib2
 
@@ -84,9 +85,12 @@ class GitHubAuth(object):
             response_body = json.loads(content)
             self._token = response_body.get('token')
 
-    def create_webhook(self, trigger_uri):
+    def create_webhook(self, trigger_uri, workflow=None):
         hook_url = ('https://api.github.com/repos/%s/hooks' %
                     self.full_repo_name)
+        if workflow is not None:
+            wf_query = urllib.quote("?workflow=%s" % ' '.join(workflow))
+            trigger_uri += wf_query
         hook_info = {
             'name': 'web',
             'events': ['pull_request', 'commit_comment'],

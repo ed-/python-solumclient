@@ -670,12 +670,12 @@ Available commands:
 
         git_url = None
         if args.git_url is not None:
-            git_url = args.git_url
             plan_definition['artifacts'][0]['content']['href'] = args.git_url
         if plan_definition['artifacts'][0]['content'].get('href') is None:
             git_url = raw_input("Please specify a git repository URL for "
                                 "your application.\n> ")
             plan_definition['artifacts'][0]['content']['href'] = git_url
+        git_url = plan_definition['artifacts'][0]['content']['href']
 
         # Check for the entry point. Check args first, then the planfile.
         # If it's neither of those places, prompt for it and update the
@@ -732,9 +732,9 @@ Available commands:
             public_key = content.get('public_key', '')
             private_repo = content.get('private', False)
             gha.add_ssh_key(public_key=public_key, is_private=private_repo)
-            trigger_url = vars(plan).get('trigger_url', '')
-            if trigger_url:
-                gha.create_webhook(trigger_url)
+            trigger_uri = vars(plan).get('trigger_uri', '')
+            if trigger_uri:
+                gha.create_webhook(trigger_uri)
 
     def deploy(self):
         """Deploy an application, building any applicable artifacts first."""
