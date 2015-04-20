@@ -53,6 +53,7 @@ import solumclient
 from solumclient.common import cli_utils
 from solumclient.common import exc
 from solumclient.common import github
+from solumclient.common import planfile
 from solumclient.common import yamlutils
 from solumclient.openstack.common.apiclient import exceptions
 from solumclient.v1 import assembly as cli_assem
@@ -61,31 +62,15 @@ from solumclient.v1 import pipeline as cli_pipe
 from solumclient.v1 import plan as cli_plan
 
 
-def name_is_valid(string):
-    try:
-        re.match(r'^([a-zA-Z0-9-_]{1,100})$', string).group(0)
-    except AttributeError:
-        return False
-    return True
-
-
 def ValidName(string):
-    if not name_is_valid(string):
+    if not planfile.name_is_valid(string):
         raise AttributeError("Names must be 1-100 characters long and must "
                              "only contain a-z,A-Z,0-9,-,_")
     return string
 
 
-def lpname_is_valid(string):
-    try:
-        re.match(r'^([a-z0-9-_]{1,100})$', string).group(0)
-    except (TypeError, AttributeError):
-        return False
-    return True
-
-
 def ValidLPName(string):
-    if not lpname_is_valid(string):
+    if not planfile.lpname_is_valid(string):
         raise AttributeError("LP names must be 1-100 characters long and "
                              "must only contain a-z,0-9,-,_")
     return string
@@ -730,186 +715,44 @@ Available commands:
 
         args = self.parser.parse_args()
 
-        # Get the plan file. Either get it from args, or supply
-        # a skeleton.
-        plan_definition = None
+        # Get the plan file. Either get it from args, or supply a skeleton.
+        plan_definition = {}
         if args.planfile is not None:
-            planfile = args.planfile
+            planfilename = args.planfile
             try:
-                with open(planfile) as definition_file:
+                with open(planfilename) as definition_file:
                     definition = definition_file.read()
                     plan_definition = yamlutils.load(definition)
-                    self._validate_plan_file(plan_definition)
-                    if (plan_definition['artifacts'][0].get('language_pack')
-                            is not None):
-                        lp = plan_definition['artifacts'][0]['language_pack']
-                        if lp != 'auto':
-                            try:
-                                lp1 = (
-                                    self.client.languagepacks.find
-                                    (name_or_id=lp)
-                                    )
-                            except Exception as e:
-                                if type(e).__name__ == 'NotFound':
-                                    raise exc.CommandError("Languagepack %s "
-                                                           "not registered"
-                                                           % lp)
-                            filtered_list = self._filter_ready_lps([lp1])
-                            if len(filtered_list) <= 0:
-                                raise exc.CommandError("Languagepack %s "
-                                                       "not READY" % lp)
-                    if plan_definition['artifacts'][0].get('ports') is None:
-                        print("No application port specified in plan file.")
-                        print("Defaulting to port 80.")
-                        plan_definition['artifacts'][0]['ports'] = 80
+
             except IOError:
-                message = "Could not open plan file %s." % planfile
+                message = "Could not open plan file %s." % planfilename
                 raise exc.CommandError(message=message)
             except ValueError:
                 message = ("Plan file %s was not a valid YAML mapping." %
-                           planfile)
+                           planfilename)
                 raise exc.CommandError(message=message)
-        else:
-            plan_definition = {
-                'version': 1,
-                'artifacts': [{
-                    'artifact_type': 'heroku',
-                    'name': '',
-                    'content': {},
-                    }]}
+
+        plan_definition = planfile.PlanDefinition(self.client, plan_definition, args)
 
         # NOTE: This assumes the plan contains exactly one artifact.
 
-        # Check for the language pack. Check args first, then planfile.
-        # If it's neither of those places, prompt for it and update the
-        # plan definition.
-
-        languagepack = None
-        if args.languagepack is not None:
-            languagepack = args.languagepack
-            plan_definition['artifacts'][0]['language_pack'] = languagepack
-        elif plan_definition['artifacts'][0].get('language_pack') is None:
-            languagepacks = self.client.languagepacks.list()
-            filtered_list = self._filter_ready_lps(languagepacks)
-
-            if len(filtered_list) > 0:
-                lpnames = [lang_pack.name for lang_pack in languagepacks]
-                lp_uuids = [lang_pack.uuid for lang_pack in languagepacks]
-                fields = ['uuid', 'name', 'description',
-                          'status', 'source_uri']
-                self._print_list(languagepacks, fields)
-                languagepack = raw_input("Please choose a languagepack from "
-                                         "the above list.\n> ")
-                while languagepack not in lpnames + lp_uuids:
-                    languagepack = raw_input("You must choose one of the named"
-                                             " language packs.\n> ")
-                plan_definition['artifacts'][0]['language_pack'] = languagepack
-            else:
-                raise exc.CommandError("No languagepack in READY state. "
-                                       "Create a languagepack first.")
-
-        # Check for the git repo URL. Check args first, then the planfile.
-        # If it's neither of those places, prompt for it and update the
-        # plan definition.
-
-        git_url = None
-        if args.git_url is not None:
-            plan_definition['artifacts'][0]['content']['href'] = args.git_url
-        if plan_definition['artifacts'][0]['content'].get('href') is None:
-            git_url = raw_input("Please specify a git repository URL for "
-                                "your application.\n> ")
-            plan_definition['artifacts'][0]['content']['href'] = git_url
-        git_url = plan_definition['artifacts'][0]['content']['href']
-
-        # Check for the entry point. Check args first, then the planfile.
-        # If it's neither of those places, prompt for it and update the
-        # plan definition.
-        run_cmd = None
-        if args.run_cmd is not None:
-            plan_definition['artifacts'][0]['run_cmd'] = args.run_cmd
-        if plan_definition['artifacts'][0].get('run_cmd') is None:
-            run_cmd = raw_input("Please specify start/run command for your "
-                                "application.\n> ")
-            plan_definition['artifacts'][0]['run_cmd'] = run_cmd
-
-        # Check for unit test command
-        if args.unittest_cmd is not None:
-            plan_definition['artifacts'][0]['unittest_cmd'] = args.unittest_cmd
-
-        # Check for the port.
-        if args.port is not None:
-            plan_definition['artifacts'][0]['ports'] = int(args.port)
-        if plan_definition['artifacts'][0].get('ports') is None:
-            plan_definition['artifacts'][0]['ports'] = 80
-
-        # Update name and description if specified.
-
-        # Check the planfile-supplied name first.
-        error_message = ("Application name must be 1-100 characters and must "
-                         "only contain a-z,A-Z,0-9,-,_")
-        app_name = ''
-        if plan_definition.get('name') is not None:
-            if not name_is_valid(plan_definition.get('name')):
-                raise exc.CommandError(message=error_message)
-            app_name = plan_definition.get('name')
-        # Check the arguments next.
-        elif args.name:
-            if name_is_valid(args.name):
-                app_name = args.name
-        # Just ask.
-        else:
-            while True:
-                app_name = raw_input("Please name the application.\n> ")
-                if name_is_valid(app_name):
-                    break
-                print(error_message)
-
-        plan_definition['name'] = app_name
-
-        artifact_name = plan_definition['artifacts'][0]['name']
-        if not lpname_is_valid(artifact_name):
-            # https://github.com/docker/compose/issues/941
-            # Docker build only allows lowercase names for now.
-            artifact_name = app_name.lower()
-        plan_definition['artifacts'][0]['name'] = artifact_name
-
-        if args.desc is not None:
-            plan_definition['description'] = args.desc
-        elif plan_definition.get('description') is None:
-            plan_definition['description'] = ''
-
-        if args.param_file is not None:
-            try:
-                with open(args.param_file) as param_f:
-                    param_def = param_f.read()
-                plan_definition['parameters'] = yamlutils.load(param_def)
-            except IOError:
-                message = "Could not open param file %s." % args.param_file
-                raise exc.CommandError(message=message)
-            except ValueError:
-                message = ("Param file %s was not YAML." %
-                           args.param_file)
-                raise exc.CommandError(message=message)
-
-        repo_token = plan_definition['artifacts'][0].get('repo_token')
+        repo_token = plan_definition.repo_token
         gha = None
 
         # If there's a public key defined in the plan, upload it.
-        content = plan_definition['artifacts'][0].get('content')
-        if content:
-            public_key = content.get('public_key', '')
-            private_repo = content.get('private', False)
-            if private_repo and public_key:
-                try:
-                    gha = github.GitHubAuth(git_url, repo_token=repo_token)
-                    repo_token = repo_token or gha.repo_token
-                    gha.add_ssh_key(public_key=public_key)
-                except github.GitHubException as ghe:
-                    raise exc.CommandError(message=str(ghe))
+        content = plan_definition._artifact('content')
 
-        plan_definition['artifacts'][0]['repo_token'] = repo_token
+        if plan_definition.private_repo and plan_definition.public_key:
+            try:
+                gha = github.GitHubAuth(git_url, repo_token=repo_token)
+                repo_token = repo_token or gha.repo_token
+                gha.add_ssh_key(public_key=plan_definition.public_key)
+            except github.GitHubException as ghe:
+                raise exc.CommandError(message=str(ghe))
 
-        plan = self.client.plans.create(yamlutils.dump(plan_definition))
+        plan_definition._repo_token = repo_token
+
+        plan = self.client.plans.create(yamlutils.dump(plan_definition.dump()))
         plan.status = 'REGISTERED'
         fields = ['uuid', 'name', 'description', 'uri', 'artifacts',
                   'trigger_uri', 'status']
