@@ -13,6 +13,7 @@
 # under the License.
 
 from solumclient.openstack.common.apiclient import client
+from solumclient.v1 import app
 from solumclient.v1 import assembly
 from solumclient.v1 import component
 from solumclient.v1 import languagepack
@@ -29,6 +30,7 @@ class Client(client.BaseClient):
     def __init__(self, http_client, extensions=None):
         """Initialize a new client for the Solum v1 API."""
         super(Client, self).__init__(http_client, extensions)
+        self.apps = app.AppManager(self)
         self.assemblies = assembly.AssemblyManager(self)
         self.components = component.ComponentManager(self)
         self.pipelines = pipeline.PipelineManager(self)
