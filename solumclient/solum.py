@@ -563,6 +563,7 @@ class AppCommands(cli_utils.CommandsBase):
     """
 
     def register(self):
+        """Register a new app."""
         self.parser.add_argument('file')
         args = self.parser.parse_args()
         with open(args.file, 'r') as inf:
@@ -582,6 +583,7 @@ class AppCommands(cli_utils.CommandsBase):
         self._print_dict(app, fields, wrap=72)
 
     def update(self):
+        """Update the registration of an existing app."""
         self.parser.add_argument('app')
 
         self.parser.add_argument('--name', type=str)
@@ -639,11 +641,13 @@ class AppCommands(cli_utils.CommandsBase):
         self._print_dict(updated_app, fields, wrap=72)
 
     def list(self):
+        """List all apps."""
         apps = self.client.apps.list()
         fields = ['name', 'id', 'description', 'languagepack']
         self._print_list(apps, fields)
 
     def show(self):
+        """Show details of one app."""
         self.parser.add_argument('name')
         args = self.parser.parse_args()
         app = self.client.apps.find(name_or_id=args.name)
@@ -657,6 +661,7 @@ class AppCommands(cli_utils.CommandsBase):
         self._print_dict(app, fields, wrap=72)
 
     def delete(self):
+        """Delete an app."""
         self.parser.add_argument('name')
         args = self.parser.parse_args()
         app = self.client.apps.find(name_or_id=args.name)

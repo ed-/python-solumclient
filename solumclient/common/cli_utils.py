@@ -185,6 +185,8 @@ class CommandsBase(object):
             obj.attrs
         except TypeError:
             pass
+        except AttributeError:
+            pass
         subset = dict([(f, getattr(obj, f, '')) for f in fields])
         if self.json_output:
             print(json.dumps(subset, indent=2, sort_keys=True))
