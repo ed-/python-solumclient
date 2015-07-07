@@ -60,6 +60,7 @@ from solumclient.v1 import assembly as cli_assem
 from solumclient.v1 import languagepack as cli_lp
 from solumclient.v1 import pipeline as cli_pipe
 from solumclient.v1 import plan as cli_plan
+from solumclient.v1 import workflow as cli_wf
 
 
 def name_is_valid(string):
@@ -562,6 +563,9 @@ class AppCommands(cli_utils.CommandsBase):
 
     """
 
+    def create(self):
+        self.register()
+
     def register(self):
         """Register a new app."""
         self.parser.add_argument('file')
@@ -667,6 +671,44 @@ class AppCommands(cli_utils.CommandsBase):
         app = self.client.apps.find(name_or_id=args.name)
         cli_app.AppManager(self.client).delete(
             app_id=str(app.id))
+
+    def deploy(self):
+        """Create a new workflow for an app."""
+        self.parser.add_argument('name')
+        args = self.parser.parse_args()
+        app = self.client.apps.find(name_or_id=args.name)
+        # TODO: create a workflow.
+
+
+class WorkflowCommands(cli_utils.CommandsBase):
+
+    def list(self):
+        """Show all of an app's live workflows."""
+        self.parser.add_argument('app')
+        args = self.parser.parse_args()
+        app = self.client.apps.find(name_or_id=args.app)
+        wfs = cli_wf.WorkflowManager(self.client, app_id=app.id).list()
+        fields = ['wf_id', 'app_id', 'actions', 'config', 'source', 'id']
+        self._print_list(wfs, fields)
+
+    def show(self):
+        """Show one of an app's live workflows."""
+        # Either "solum workflow show <app_id_or_name> <workflow_uuid>
+        # Or "solum workflow show <app_id_or_name> <workflow_revision>
+        self.parser.add_argument('app')
+        self.parser.add_argument('workflow')
+        args = self.parser.parse_args()
+        revision = args.workflow
+        try:
+            revision = int(revision, 10)
+        except ValueError:
+            revision = args.workflow
+        app = self.client.apps.find(name_or_id=args.app)
+
+        wfman = cli_wf.WorkflowManager(self.client, app_id=app.id)
+        wf = wfman.find(revision_or_id=revision)
+        fields = ['wf_id', 'app_id', 'actions', 'config', 'source']
+        self._print_dict(wf, fields, wrap=72)
 
 
 class OldAppCommands(cli_utils.CommandsBase):
@@ -1319,6 +1361,8 @@ Available commands:
         'languagepack': LanguagePackCommands,
         'component': ComponentCommands,
         'info': InfoCommands,
+        'wf': WorkflowCommands,
+        'workflow': WorkflowCommands,
     }
 
     choices = resources.keys()
