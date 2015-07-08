@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import json
+
 from solumclient.common import base as solum_base
 from solumclient.common import exc
 from solumclient.openstack.common.apiclient import base as apiclient_base
@@ -38,6 +40,10 @@ class WorkflowManager(solum_base.CrudManager, solum_base.FindMixin):
         return super(WorkflowManager, self).list(base_url=self.base_url, **kwargs)
 
     def create(self, **kwargs):
+        #kwargs = self._filter_kwargs(kwargs)
+        #kwargs['json'] = {'actions': actions}
+        #post_url = self.build_url(base_url=self.base_url, **kwargs)
+        #return self.client.create(post_url, **kwargs)
         return super(WorkflowManager, self).create(base_url=self.base_url, **kwargs)
 
     def get(self, **kwargs):

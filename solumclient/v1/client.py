@@ -20,6 +20,7 @@ from solumclient.v1 import languagepack
 from solumclient.v1 import pipeline
 from solumclient.v1 import plan
 from solumclient.v1 import platform
+from solumclient.v1 import workflow
 
 
 class Client(client.BaseClient):
@@ -37,3 +38,4 @@ class Client(client.BaseClient):
         self.platform = platform.PlatformManager(self)
         self.plans = plan.PlanManager(self)
         self.languagepacks = languagepack.LanguagePackManager(self)
+        self.workflows = workflow.WorkflowManager(self)

@@ -672,12 +672,28 @@ class AppCommands(cli_utils.CommandsBase):
         cli_app.AppManager(self.client).delete(
             app_id=str(app.id))
 
-    def deploy(self):
-        """Create a new workflow for an app."""
+    def _create_workflow(self, actions):
         self.parser.add_argument('name')
         args = self.parser.parse_args()
         app = self.client.apps.find(name_or_id=args.name)
-        # TODO: create a workflow.
+        wf = cli_wf.WorkflowManager(self.client, app_id=app.id).create(actions=actions)
+        fields = ['wf_id', 'app_id', 'actions', 'config', 'source']
+        self._print_dict(wf, fields, wrap=72)
+
+    def unittest(self):
+        """Create a new workflow for an app."""
+        actions = ['unittest']
+        self._create_workflow(actions)
+
+    def build(self):
+        """Create a new workflow for an app."""
+        actions = ['unittest', 'build']
+        self._create_workflow(actions)
+
+    def deploy(self):
+        """Create a new workflow for an app."""
+        actions = ['unittest', 'build', 'deploy']
+        self._create_workflow(actions)
 
 
 class WorkflowCommands(cli_utils.CommandsBase):
