@@ -677,7 +677,7 @@ class AppCommands(cli_utils.CommandsBase):
         args = self.parser.parse_args()
         app = self.client.apps.find(name_or_id=args.name)
         wf = cli_wf.WorkflowManager(self.client, app_id=app.id).create(actions=actions)
-        fields = ['wf_id', 'app_id', 'actions', 'config', 'source']
+        fields = ['wf_id', 'app_id', 'actions', 'config', 'source', 'id', 'created_at', 'updated_at']
         self._print_dict(wf, fields, wrap=72)
 
     def unittest(self):
@@ -704,7 +704,7 @@ class WorkflowCommands(cli_utils.CommandsBase):
         args = self.parser.parse_args()
         app = self.client.apps.find(name_or_id=args.app)
         wfs = cli_wf.WorkflowManager(self.client, app_id=app.id).list()
-        fields = ['wf_id', 'app_id', 'actions', 'config', 'source', 'id']
+        fields = ['wf_id', 'app_id', 'actions', 'config', 'source', 'id', 'created_at', 'updated_at']
         self._print_list(wfs, fields)
 
     def show(self):
@@ -723,7 +723,7 @@ class WorkflowCommands(cli_utils.CommandsBase):
 
         wfman = cli_wf.WorkflowManager(self.client, app_id=app.id)
         wf = wfman.find(revision_or_id=revision)
-        fields = ['wf_id', 'app_id', 'actions', 'config', 'source']
+        fields = ['wf_id', 'app_id', 'actions', 'config', 'source', 'id', 'created_at', 'updated_at']
         self._print_dict(wf, fields, wrap=72)
 
 
